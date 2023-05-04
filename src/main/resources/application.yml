@@ -1,0 +1,7 @@
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/jollify?schema=kf
+    username: postgres
+    password: postgres123!
+    pool:
+      enabled: on
