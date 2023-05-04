@@ -1,10 +1,14 @@
-package com.example.reactive.repository;
+package com.example.reactive.repository
 
 import com.example.reactive.model.player.Player
-import org.springframework.data.repository.reactive.ReactiveCrudRepository
-import reactor.core.publisher.Mono
+import kotlinx.coroutines.flow.Flow
+import org.springframework.data.r2dbc.repository.Query
+import org.springframework.data.repository.kotlin.CoroutineCrudRepository
+import org.springframework.data.repository.query.Param
+import org.springframework.stereotype.Repository
 
-interface PlayerRepository : ReactiveCrudRepository<Player, Long> {
-
-    fun findByPlayerUid(playerUid: String): Mono<Player>
+@Repository
+interface PlayerRepository : CoroutineCrudRepository<Player, Long> {
+    @Query("select * from kf.player where player_uid = :playerUid")
+    fun findByPlayerUid(@Param("playerUid") playerUid: String): Flow<Player>
 }
