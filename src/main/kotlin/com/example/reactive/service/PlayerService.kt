@@ -8,7 +8,6 @@ import com.example.reactive.repository.PlayerRepository
 import com.example.reactive.repository.PlayerVaultRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import org.springframework.stereotype.Service
 
@@ -18,14 +17,19 @@ class PlayerService(
     private val playerCharacterRepository: PlayerCharacterRepository,
     private val playerVaultRepository: PlayerVaultRepository,
 ) {
-    suspend fun fetchPlayerAndCharacterAndVault(playerUid: String, charId: Long): PlayerAndCharacterAndVault = coroutineScope {
-        val player: Player = playerRepository.findByPlayerUid(playerUid).first()
+    suspend fun fetchPlayerAndCharacterAndVault(playerUid: String, charId: Long): PlayerAndCharacterAndVault =
+        coroutineScope {
+            val player: Player = playerRepository.findByPlayerUid(playerUid)
+                ?: throw NoSuchElementException("No player exists $playerUid")
 
-        val playerCharacter = async { playerCharacterRepository.findByPlayerIdAndCharId(player.id, charId).first() }
-        val playerVaults = async { playerVaultRepository.findByPlayerId(playerId = player.id).toList() }
+            val playerCharacter = async {
+                playerCharacterRepository.findByPlayerIdAndCharId(player.id, charId)
+                    ?: throw NoSuchElementException("No character exists $charId")
+            }
+            val playerVaults = async { playerVaultRepository.findByPlayerId(playerId = player.id).toList() }
 
-        PlayerAndCharacterAndVault(player, playerCharacter.await(), playerVaults.await())
-    }
+            PlayerAndCharacterAndVault(player, playerCharacter.await(), playerVaults.await())
+        }
 
     data class PlayerAndCharacterAndVault(
         val player: Player,
