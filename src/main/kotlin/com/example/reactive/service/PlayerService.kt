@@ -7,7 +7,6 @@ import com.example.reactive.repository.PlayerCharacterRepository
 import com.example.reactive.repository.PlayerRepository
 import com.example.reactive.repository.PlayerVaultRepository
 import kotlinx.coroutines.*
-import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.flow.toList
 import org.springframework.stereotype.Service
 
@@ -17,21 +16,23 @@ class PlayerService(
     private val playerCharacterRepository: PlayerCharacterRepository,
     private val playerVaultRepository: PlayerVaultRepository,
 ) {
-    suspend fun fetchPlayerAndCharacterAndVault(playerUid: String, charId: Long): PlayerAndCharacterAndVault {
-        val player: Player = playerRepository.findByPlayerUid(playerUid)
-            ?: throw NoSuchElementException("No player exists $playerUid")
+    suspend fun fetchPlayerAndCharacterAndVault(playerUid: String, charId: Long): PlayerAndCharacterAndVault =
+        coroutineScope {
+            val player: Player = playerRepository.findByPlayerUid(playerUid)
+                ?: throw NoSuchElementException("No player exists $playerUid")
 
-        val playerCharacter = withContext(Default) {
-            println("Running ${coroutineContext[CoroutineName]} on thread: ${Thread.currentThread().name}")
-            playerCharacterRepository.findByPlayerIdAndCharId(player.id, charId)
-                ?: throw NoSuchElementException("No character exists $charId")
+            val playerCharacter = async {
+                println("Running ${coroutineContext[CoroutineName]} on thread: ${Thread.currentThread().name}")
+                playerCharacterRepository.findByPlayerIdAndCharId(player.id, charId)
+                    ?: throw NoSuchElementException("No character exists $charId")
+            }
+            val playerVaults = async {
+                println("Running ${coroutineContext[CoroutineName]} on thread: ${Thread.currentThread().name}")
+                playerVaultRepository.findByPlayerId(playerId = player.id).toList()
+            }
+
+            PlayerAndCharacterAndVault(player, playerCharacter.await(), playerVaults.await())
         }
-        val playerVaults = withContext(Default) {
-            println("Running ${coroutineContext[CoroutineName]} on thread: ${Thread.currentThread().name}")
-            playerVaultRepository.findByPlayerId(playerId = player.id).toList()
-        }
-        return PlayerAndCharacterAndVault(player, playerCharacter, playerVaults)
-    }
 
     data class PlayerAndCharacterAndVault(
         val player: Player,
